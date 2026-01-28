@@ -1,19 +1,11 @@
-🌍 **Live Demo:** [https://frontend-cszhgdelh-dhairya3391s-projects.vercel.app](https://frontend-cszhgdelh-dhairya3391s-projects.vercel.app)
+# 🚀 SkillSwap 
 
-# 🚀 SkillSwap - Odoo Hackathon Project
-
-A modern skill exchange platform built for the Odoo hackathon, allowing users to connect, share skills, and learn from each other through a collaborative marketplace.
+A modern skill exchange platform built for skil-exchange, allowing users to connect, share skills, and learn from each other through a collaborative marketplace.
 
 ## ⚠️ Note :
 
 - To get the most smooth experience please use desktop only for now.
-
-## 🏆 Team Members
-
-- **Dhariya Adroja** - dhairyaadroja3391@gmail.com
-- **Harpalsinh Sindhav** - hsindhav746@rku.ac.in
-- **Shreyansh Ranpariya** - shreyanshranpariya@gmail.com
-
+- 
 ## ✨ Features
 
 - 🔐 **User Authentication** - Secure login/register with JWT tokens
@@ -223,17 +215,5 @@ SkillSwap/
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Built for Odoo Hackathon
-- Special thanks to the Odoo team for the opportunity
-- Inspired by the need for skill sharing and community building
-
----
 
 **Happy Coding! 🎉**
