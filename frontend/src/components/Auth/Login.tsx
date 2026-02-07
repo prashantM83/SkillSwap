@@ -15,12 +15,19 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 export const Login = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { user, loading, error, token } = useSelector((state: RootState) => state.auth);
+  const { user, loading, error, token } = useSelector(
+    (state: RootState) => state.auth,
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [validationError, setValidationError] = useState("");
   const hasLoggedIn = useRef(false);
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   useEffect(() => {
     if (user && token && !hasLoggedIn.current) {
@@ -30,7 +37,7 @@ export const Login = () => {
         navigate("/admin");
       } else {
         toast.success("Login successful!");
-        navigate("/");
+        navigate("/browse");
       }
     }
   }, [user, token, navigate]);
@@ -43,7 +50,26 @@ export const Login = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginUser({ email, password }));
+    setValidationError("");
+
+    if (!email.trim()) {
+      setValidationError("Email is required");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setValidationError("Please enter a valid email address");
+      return;
+    }
+    if (!password) {
+      setValidationError("Password is required");
+      return;
+    }
+    if (password.length < 6) {
+      setValidationError("Password must be at least 6 characters");
+      return;
+    }
+
+    dispatch(loginUser({ email: email.toLowerCase().trim(), password }));
   };
 
   return (
@@ -67,9 +93,14 @@ export const Login = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="email" className="mb-3">Email Address</Label>
+                <Label htmlFor="email" className="mb-3">
+                  Email Address
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                  <Mail
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
                   <Input
                     id="email"
                     type="email"
@@ -82,9 +113,14 @@ export const Login = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="password" className="mb-3">Password</Label>
+                <Label htmlFor="password" className="mb-3">
+                  Password
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                  <Lock
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -104,14 +140,28 @@ export const Login = () => {
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </Button>
                 </div>
+                <div className="text-right">
+                  <NavLink
+                    to="/auth/forgot-password"
+                    className="text-sm text-gray-600 hover:text-black transition-colors"
+                  >
+                    Forgot Password?
+                  </NavLink>
+                </div>
               </div>
-              {error && (
+              {(error || validationError) && (
                 <Alert variant="destructive">
                   <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>
+                    {validationError || error}
+                  </AlertDescription>
                 </Alert>
               )}
-              <Button type="submit" className="w-full flex items-center justify-center space-x-2" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full flex items-center justify-center space-x-2"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -139,10 +189,16 @@ export const Login = () => {
           </CardContent>
         </Card>
         <div className="mt-6 bg-gray-100 rounded-lg p-4 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Demo Credentials</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">
+            Demo Credentials
+          </h3>
           <div className="text-xs text-gray-600 space-y-1">
-            <p><strong>Admin:</strong> admin@skillswap.com / admin123</p>
-            <p><strong>User:</strong> user@skillswap.com / user123</p>
+            <p>
+              <strong>Admin:</strong> admin@skillswap.com / admin123
+            </p>
+            <p>
+              <strong>User:</strong> user@skillswap.com / user123
+            </p>
           </div>
         </div>
       </div>

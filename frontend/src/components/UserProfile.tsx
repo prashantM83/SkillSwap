@@ -11,7 +11,13 @@ import {
   Award,
   Clock,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
+import {
+  getUserFeedback,
+  getFeedbackByUser,
+  type Feedback,
+} from "../services/feedbackService";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { updateUserProfile } from "../features/auth/authSlice";
@@ -25,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserProfileProps {
   user: UserType;
@@ -44,11 +51,36 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   const [editedUser, setEditedUser] = useState(user);
   const [newSkillOffered, setNewSkillOffered] = useState("");
   const [newSkillWanted, setNewSkillWanted] = useState("");
+  const [receivedFeedback, setReceivedFeedback] = useState<Feedback[]>([]);
+  const [givenFeedback, setGivenFeedback] = useState<Feedback[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(true);
+  const [feedbackTab, setFeedbackTab] = useState("received");
 
   // Update editedUser when user prop changes
   useEffect(() => {
     setEditedUser(user);
   }, [user]);
+
+  // Fetch user feedback
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        setLoadingFeedback(true);
+        // Fetch feedback RECEIVED by this user
+        const received = await getUserFeedback(user._id);
+        // Fetch feedback GIVEN by this user
+        const given = await getFeedbackByUser(user._id);
+
+        setReceivedFeedback(received);
+        setGivenFeedback(given);
+      } catch (error) {
+        console.error("Failed to fetch feedback:", error);
+      } finally {
+        setLoadingFeedback(false);
+      }
+    };
+    fetchFeedback();
+  }, [user._id]);
 
   const handleSave = async () => {
     try {
@@ -153,7 +185,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                   )}
                   <div className="flex items-center space-x-2">
                     <Calendar size={16} />
-                    <span>Joined {new Date(user.joinDate).toLocaleDateString()}</span>
+                    <span>
+                      Joined {new Date(user.joinDate).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -181,7 +215,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                   {user.totalSwaps}
                 </span>
               </div>
-              <div className="text-sm font-medium text-gray-600">Swaps Completed</div>
+              <div className="text-sm font-medium text-gray-600">
+                Swaps Completed
+              </div>
             </div>
             <div className="text-center bg-white rounded-lg p-4 shadow-sm">
               <div className="flex items-center justify-center space-x-2 mb-2">
@@ -190,7 +226,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                   {user.rating.toFixed(1)}
                 </span>
               </div>
-              <div className="text-sm font-medium text-gray-600">Average Rating</div>
+              <div className="text-sm font-medium text-gray-600">
+                Average Rating
+              </div>
             </div>
             <div className="text-center bg-white rounded-lg p-4 shadow-sm">
               <div className="flex items-center justify-center space-x-2 mb-2">
@@ -199,7 +237,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                   {user.skillsOffered.length}
                 </span>
               </div>
-              <div className="text-sm font-medium text-gray-600">Skills Offered</div>
+              <div className="text-sm font-medium text-gray-600">
+                Skills Offered
+              </div>
             </div>
           </div>
         </CardContent>
@@ -209,7 +249,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
           {/* Skills Offered */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Skills Offered</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Skills Offered
+              </h3>
               {isOwnProfile && isEditing && (
                 <div className="flex items-center space-x-2">
                   <Input
@@ -217,9 +259,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                     onChange={(e) => setNewSkillOffered(e.target.value)}
                     placeholder="Add a skill"
                     className="w-48"
-                    onKeyPress={(e) => e.key === 'Enter' && addSkill('offered')}
+                    onKeyPress={(e) => e.key === "Enter" && addSkill("offered")}
                   />
-                  <Button size="sm" onClick={() => addSkill('offered')}>
+                  <Button size="sm" onClick={() => addSkill("offered")}>
                     <Plus size={16} />
                   </Button>
                 </div>
@@ -227,11 +269,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({
             </div>
             <div className="flex flex-wrap gap-2">
               {editedUser.skillsOffered.map((skill, index) => (
-                <Badge key={index} variant="secondary" className="bg-gray-200 text-gray-900">
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="bg-gray-200 text-gray-900"
+                >
                   {skill}
                   {isOwnProfile && isEditing && (
                     <button
-                      onClick={() => removeSkill('offered', index)}
+                      onClick={() => removeSkill("offered", index)}
                       className="ml-2 hover:text-red-600"
                     >
                       <X size={12} />
@@ -247,7 +293,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
           {/* Skills Wanted */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Skills Wanted</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Skills Wanted
+              </h3>
               {isOwnProfile && isEditing && (
                 <div className="flex items-center space-x-2">
                   <Input
@@ -255,9 +303,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                     onChange={(e) => setNewSkillWanted(e.target.value)}
                     placeholder="Add a skill"
                     className="w-48"
-                    onKeyPress={(e) => e.key === 'Enter' && addSkill('wanted')}
+                    onKeyPress={(e) => e.key === "Enter" && addSkill("wanted")}
                   />
-                  <Button size="sm" onClick={() => addSkill('wanted')}>
+                  <Button size="sm" onClick={() => addSkill("wanted")}>
                     <Plus size={16} />
                   </Button>
                 </div>
@@ -269,7 +317,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                   {skill}
                   {isOwnProfile && isEditing && (
                     <button
-                      onClick={() => removeSkill('wanted', index)}
+                      onClick={() => removeSkill("wanted", index)}
                       className="ml-2 hover:text-red-600"
                     >
                       <X size={12} />
@@ -284,10 +332,16 @@ export const UserProfile: React.FC<UserProfileProps> = ({
 
           {/* Availability */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Availability</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Availability
+            </h3>
             <div className="flex flex-wrap gap-2">
               {editedUser.availability.map((time, index) => (
-                <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="bg-green-100 text-green-800"
+                >
                   <Clock size={12} className="mr-1" />
                   {time}
                 </Badge>
@@ -295,7 +349,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
             </div>
             {isOwnProfile && isEditing && (
               <div className="mt-4">
-                <Label className="text-sm font-medium text-gray-700">Add availability:</Label>
+                <Label className="text-sm font-medium text-gray-700">
+                  Add availability:
+                </Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {availabilityOptions.map((option) => (
                     <Button
@@ -329,7 +385,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                     Cancel
                   </Button>
                   <Button onClick={handleSave} disabled={loading}>
-                    {loading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save className="mr-2" size={16} />}
+                    {loading ? (
+                      <Loader2 className="animate-spin mr-2" size={16} />
+                    ) : (
+                      <Save className="mr-2" size={16} />
+                    )}
                     Save Changes
                   </Button>
                 </>
@@ -338,6 +398,163 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                   <Edit2 className="mr-2" size={16} />
                   Edit Profile
                 </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Feedback Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              <MessageSquare size={20} />
+              <span>Reviews & Feedback</span>
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs
+            value={feedbackTab}
+            onValueChange={setFeedbackTab}
+            className="mb-4"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger
+                value="received"
+                className="flex items-center space-x-2"
+              >
+                <span>Received</span>
+                <Badge variant="secondary">{receivedFeedback.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger
+                value="given"
+                className="flex items-center space-x-2"
+              >
+                <span>Given</span>
+                <Badge variant="secondary">{givenFeedback.length}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {loadingFeedback ? (
+            <div className="text-center py-8">
+              <Loader2 className="animate-spin h-8 w-8 text-gray-500 mx-auto mb-2" />
+              <span className="text-sm text-gray-600">Loading feedback...</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {feedbackTab === "received" ? (
+                receivedFeedback.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageSquare
+                      size={48}
+                      className="mx-auto mb-4 text-gray-300"
+                    />
+                    <p>No feedback received yet</p>
+                  </div>
+                ) : (
+                  receivedFeedback.map((item) => {
+                    const fromUser =
+                      typeof item.fromUserId === "string"
+                        ? null
+                        : item.fromUserId;
+                    return (
+                      <div
+                        key={item._id}
+                        className="border rounded-lg p-4 bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="w-8 h-8">
+                              <AvatarFallback className="bg-gray-200 text-gray-700 text-sm">
+                                {fromUser?.name?.[0] || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {fromUser?.name || "Anonymous"}
+                              </p>
+                              <div className="flex items-center space-x-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    size={14}
+                                    className={
+                                      i < item.rating
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-gray-300"
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 mt-2">
+                          {item.comment}
+                        </p>
+                      </div>
+                    );
+                  })
+                )
+              ) : givenFeedback.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <MessageSquare
+                    size={48}
+                    className="mx-auto mb-4 text-gray-300"
+                  />
+                  <p>No feedback given yet</p>
+                </div>
+              ) : (
+                givenFeedback.map((item) => {
+                  const toUser =
+                    typeof item.toUserId === "string" ? null : item.toUserId;
+                  return (
+                    <div
+                      key={item._id}
+                      className="border rounded-lg p-4 bg-gray-50"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-gray-200 text-gray-700 text-sm">
+                              {toUser?.name?.[0] || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-sm">
+                              To: {toUser?.name || "Anonymous"}
+                            </p>
+                            <div className="flex items-center space-x-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={14}
+                                  className={
+                                    i < item.rating
+                                      ? "fill-yellow-400 text-yellow-400"
+                                      : "text-gray-300"
+                                  }
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 mt-2">
+                        {item.comment}
+                      </p>
+                    </div>
+                  );
+                })
               )}
             </div>
           )}

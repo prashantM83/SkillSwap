@@ -49,3 +49,27 @@ export interface AdminMessage {
   updatedAt?: string;
   isActive: boolean;
 }
+
+export interface Session {
+  _id: string;
+  swapRequestId: string | SwapRequest;
+  hostUserId: string | User;
+  guestUserId: string | User;
+  title: string;
+  description?: string;
+  scheduledAt: string;
+  duration: number;
+  timezone: string;
+  meetingLink?: string;
+  meetingType: "external" | "jitsi" | "in-person";
+  jitsiRoomId?: string;
+  location?: string;
+  notes?: string;
+  status: "scheduled" | "in-progress" | "completed" | "cancelled" | "no-show";
+  cancelledBy?: string;
+  cancelReason?: string;
+  reminder24hSent: boolean;
+  reminder1hSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

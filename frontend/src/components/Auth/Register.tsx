@@ -4,7 +4,15 @@ import { registerUser } from "../../features/auth/authSlice";
 import { RootState, AppDispatch } from "../../store";
 import { useNavigate, NavLink } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Mail, Lock, User, UserPlus, Sparkles } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  UserPlus,
+  Sparkles,
+} from "lucide-react";
 // shadcn/ui imports
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +23,9 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 export const Register = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { user, loading, error, token } = useSelector((state: RootState) => state.auth);
+  const { user, loading, error, token } = useSelector(
+    (state: RootState) => state.auth,
+  );
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,13 +34,19 @@ export const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const hasRegistered = useRef(false);
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   useEffect(() => {
     if (user && token && !hasRegistered.current) {
       toast.success("Registration successful! Welcome to SkillSwap!");
       hasRegistered.current = true;
-      navigate("/");
+      navigate("/browse");
     }
   }, [user, token, navigate]);
 
@@ -48,8 +64,39 @@ export const Register = () => {
     }
   }, [password, confirmPassword]);
 
+  useEffect(() => {
+    if (name && name.trim().length < 2) {
+      setNameError("Name must be at least 2 characters");
+    } else if (name && !/[a-zA-Z]/.test(name)) {
+      setNameError("Name must contain at least one letter");
+    } else {
+      setNameError("");
+    }
+  }, [name]);
+
+  useEffect(() => {
+    if (email && !validateEmail(email)) {
+      setEmailError("Please enter a valid email address");
+    } else {
+      setEmailError("");
+    }
+  }, [email]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!name.trim() || name.trim().length < 2) {
+      setNameError("Name must be at least 2 characters");
+      return;
+    }
+    if (!/[a-zA-Z]/.test(name)) {
+      setNameError("Name must contain at least one letter");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
     if (password !== confirmPassword) {
       setPasswordError("Passwords do not match");
       return;
@@ -58,7 +105,13 @@ export const Register = () => {
       setPasswordError("Password must be at least 6 characters long");
       return;
     }
-    dispatch(registerUser({ name, email, password }));
+    dispatch(
+      registerUser({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password,
+      }),
+    );
   };
 
   return (
@@ -82,9 +135,14 @@ export const Register = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="name" className="mb-3">Full Name</Label>
+                <Label htmlFor="name" className="mb-3">
+                  Full Name
+                </Label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                  <User
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
                   <Input
                     id="name"
                     type="text"
@@ -97,9 +155,14 @@ export const Register = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="email" className="mb-3">Email Address</Label>
+                <Label htmlFor="email" className="mb-3">
+                  Email Address
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                  <Mail
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
                   <Input
                     id="email"
                     type="email"
@@ -112,9 +175,14 @@ export const Register = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="password" className="mb-3">Password</Label>
+                <Label htmlFor="password" className="mb-3">
+                  Password
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                  <Lock
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -136,9 +204,14 @@ export const Register = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="confirmPassword" className="mb-3">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="mb-3">
+                  Confirm Password
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                  <Lock
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
@@ -155,30 +228,52 @@ export const Register = () => {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2"
                   >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} />
+                    ) : (
+                      <Eye size={20} />
+                    )}
                   </Button>
                 </div>
               </div>
               <div className="bg-gray-100 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-2">Password Requirements:</h4>
+                <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                  Password Requirements:
+                </h4>
                 <ul className="text-xs text-gray-600 space-y-1">
-                  <li className={`flex items-center space-x-2 ${password.length >= 6 ? 'text-green-600' : ''}`}>
-                    <div className={`w-2 h-2 rounded-full ${password.length >= 6 ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <li
+                    className={`flex items-center space-x-2 ${password.length >= 6 ? "text-green-600" : ""}`}
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${password.length >= 6 ? "bg-green-500" : "bg-gray-400"}`}
+                    ></div>
                     <span>At least 6 characters long</span>
                   </li>
-                  <li className={`flex items-center space-x-2 ${password && confirmPassword && password === confirmPassword ? 'text-green-600' : ''}`}>
-                    <div className={`w-2 h-2 rounded-full ${password && confirmPassword && password === confirmPassword ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <li
+                    className={`flex items-center space-x-2 ${password && confirmPassword && password === confirmPassword ? "text-green-600" : ""}`}
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${password && confirmPassword && password === confirmPassword ? "bg-green-500" : "bg-gray-400"}`}
+                    ></div>
                     <span>Passwords match</span>
                   </li>
                 </ul>
               </div>
-              {(error || passwordError) && (
+              {(error || passwordError || nameError || emailError) && (
                 <Alert variant="destructive">
                   <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{passwordError || error}</AlertDescription>
+                  <AlertDescription>
+                    {nameError || emailError || passwordError || error}
+                  </AlertDescription>
                 </Alert>
               )}
-              <Button type="submit" className="w-full flex items-center justify-center space-x-2" disabled={loading || !!passwordError}>
+              <Button
+                type="submit"
+                className="w-full flex items-center justify-center space-x-2"
+                disabled={
+                  loading || !!passwordError || !!nameError || !!emailError
+                }
+              >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

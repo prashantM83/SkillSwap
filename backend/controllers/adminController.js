@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Swap = require("../models/SwapRequest");
 const Feedback = require("../models/Feedback");
 const AdminMessage = require("../models/AdminMessage");
+const { sendMail, emailTemplates } = require("../utils/mailSender");
 
 // Middleware check
 const isAdmin = (user) => user?.isAdmin;
@@ -39,7 +40,32 @@ exports.getAllFeedbackAdmin = async (req, res) => {
 // CRUD for Admin Messages
 exports.createMessage = async (req, res) => {
   if (!isAdmin(req.user)) return res.sendStatus(403);
-  const msg = await AdminMessage.create(req.body);
+  
+  const { title, content, type, sendEmail } = req.body;
+  const msg = await AdminMessage.create({ title, content, type });
+
+  // Send email to all users if requested
+  if (sendEmail) {
+    try {
+      const users = await User.find({ isBanned: false }).select("name email");
+      const emailTemplate = emailTemplates.adminAnnouncement;
+      
+      // Send emails in background (non-blocking)
+      users.forEach((user) => {
+        const announcement = emailTemplate(user.name, title, content, type);
+        sendMail({
+          to: user.email,
+          subject: announcement.subject,
+          html: announcement.html,
+        }).catch((err) => console.error(`Failed to send announcement to ${user.email}:`, err.message));
+      });
+
+      console.log(`Admin announcement email queued for ${users.length} users`);
+    } catch (emailError) {
+      console.error("Failed to send announcement emails:", emailError);
+    }
+  }
+
   res.status(201).json(msg);
 };
 

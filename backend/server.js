@@ -1,87 +1,8 @@
-// const express = require("express");
-// const cors = require("cors");
-// const dotenv = require("dotenv");
-// const connectDB = require("./config/database");
-// const { sendMailer } = require("./utils/mailSender");
-
-
-// // Load env vars
-// dotenv.config();
-
-// // Connect to DB
-// connectDB();
-
-// // Init express app
-// const app = express();
-
-// // Middleware
-// app.use(cors());
-// app.use(express.json());
-
-
-// // calling nodemailer testing
-// sendMailer(
-//   {
-//     // to: "dhairyaadroja3391@gmail.com",
-//     subject : "",
-//     html : `<div style="font-family: Arial, sans-serif; line-height: 1.6;">
-//   <h2 style="color: #4A90E2;">🌟 Skill Swap – Collaboration Opportunity</h2>
-
-//   <p>Hi there 👋,</p>
-
-//   <p>
-//     I hope you're doing great! I'm reaching out from <strong>Skill Swap</strong> to explore a potential 
-//     collaboration 🤝. We believe your skills could be a perfect match for our community.
-//   </p>
-
-//   <p>
-//     If you're interested, feel free to reply to this email or log in to the platform to check your 
-//     latest requests and updates ✨.
-//   </p>
-
-//   <p>
-//     Looking forward to connecting with you!<br>
-//     Warm regards,<br>
-//     <strong>Skill Swap Team</strong> 💼
-//   </p>
-
-//   <hr style="margin-top: 30px;">
-
-//   <p style="font-size: 12px; color: gray;">
-//     📩 This is an automated email. If you received it by mistake, please ignore it.
-//   </p>
-// </div>
-// `
-//   }
-// )
-
-
-// const authRoutes = require("./routes/auth");
-// const userRoutes = require("./routes/users");
-// const swapRoutes = require("./routes/swaps");
-// const feedbackRoutes = require("./routes/feedback");
-// const adminRoutes = require("./routes/admin");
-
-// app.use("/api/auth", authRoutes);
-// app.use("/api/users", userRoutes);
-// app.use("/api/swaps", swapRoutes);
-// app.use("/api/feedback", feedbackRoutes);
-// app.use("/api/admin", adminRoutes);
-
-// // Test route
-// app.get("/", (req, res) => {
-//   res.send("🌐 SkillSwap API is running...");
-// });
-
-// // Listen
-// const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running on http://localhost:${PORT}`);
-// });
 // Load environment variables FIRST
-
 const path = require("path");
 const fs = require("fs");
+const http = require("http");
+const { Server } = require("socket.io");
 
 // 🔍 DEBUG: check if .env file exists
 const envPath = path.join(__dirname, ".env");
@@ -94,7 +15,6 @@ require("dotenv").config({ path: envPath });
 // 🔍 DEBUG: print env value
 console.log("🔐 MONGO_URI from env =", process.env.MONGO_URI);
 
-
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/database");
@@ -105,9 +25,41 @@ const userRoutes = require("./routes/users");
 const swapRoutes = require("./routes/swaps");
 const feedbackRoutes = require("./routes/feedback");
 const adminRoutes = require("./routes/admin");
+const messageRoutes = require("./routes/messages");
+const notificationRoutes = require("./routes/notifications");
+const sessionRoutes = require("./routes/sessions");
+
+// Socket handler
+const { initializeSocket } = require("./socket/socketHandler");
+
+// Cron jobs
+const { initializeReminderJobs } = require("./jobs/reminderJob");
 
 // Initialize app
 const app = express();
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  // Connection settings for low latency
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ["websocket", "polling"],
+});
+
+// Initialize socket handlers
+const { onlineUsers } = initializeSocket(io);
+
+// Make io accessible to routes
+app.set("io", io);
+app.set("onlineUsers", onlineUsers);
 
 // Connect to MongoDB
 connectDB();
@@ -127,14 +79,29 @@ app.use("/api/users", userRoutes);
 app.use("/api/swaps", swapRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/sessions", sessionRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
-  res.send("🌐 SkillSwap API is running...");
+  res.send("🌐 SkillSwap API is running with Socket.io...");
+});
+
+// Get online users count
+app.get("/api/online-users", (req, res) => {
+  res.json({
+    count: onlineUsers.size,
+    users: Array.from(onlineUsers.keys()),
+  });
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🔌 Socket.io ready for connections`);
+  
+  // Initialize reminder cron jobs
+  initializeReminderJobs(io, onlineUsers);
 });
