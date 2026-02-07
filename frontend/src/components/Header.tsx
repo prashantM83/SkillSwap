@@ -1,16 +1,36 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { User, Settings, Bell, Search, MessageSquare, Menu } from "lucide-react";
+import {
+  User,
+  Settings,
+  Bell,
+  Search,
+  MessageSquare,
+  MessageCircle,
+  Menu,
+  Home,
+  Calendar,
+} from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
 import { toast } from "react-toastify";
 import type { User as UserType } from "../types";
+import { NotificationsDropdown } from "./Notifications/NotificationsDropdown";
 // shadcn/ui imports
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem } from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+} from "@/components/ui/navigation-menu";
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 
 interface HeaderProps {
@@ -18,14 +38,20 @@ interface HeaderProps {
   notifications: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) => {
+export const Header: React.FC<HeaderProps> = ({
+  currentUser,
+  notifications,
+}) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const navItems = [
-    { id: "/", label: "Browse Skills", icon: Search },
+    { id: "/", label: "Home", icon: Home },
+    { id: "/browse", label: "Browse Skills", icon: Search },
     { id: "/profile", label: "My Profile", icon: User },
     { id: "/swaps", label: "My Swaps", icon: MessageSquare },
+    { id: "/sessions", label: "Sessions", icon: Calendar },
+    { id: "/messages", label: "Messages", icon: MessageCircle },
   ];
   if (currentUser?.isAdmin) {
     navItems.push({ id: "/admin", label: "Admin", icon: Settings });
@@ -45,7 +71,9 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) =>
           <div className="flex items-center">
             <NavLink to={"/"} className="flex items-center space-x-2">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-sm sm:text-lg">S</span>
+                <span className="text-white font-bold text-sm sm:text-lg">
+                  S
+                </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-black">
                 SkillSwap
@@ -65,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) =>
                         <NavLink
                           to={item.id}
                           className={({ isActive }) =>
-                            `flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            `flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                               isActive
                                 ? "bg-black text-white shadow-sm"
                                 : "text-gray-700 hover:text-black hover:bg-gray-100"
@@ -83,44 +111,42 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) =>
 
               {/* Desktop User Menu */}
               <div className="hidden lg:flex items-center space-x-4">
-                <Button variant="ghost" className="relative p-2">
-                  <Bell size={20} />
-                  {notifications > 0 && (
-                    <Badge className="absolute -top-1 -right-1 px-2 py-0.5 text-xs bg-red-500">
-                      {notifications}
-                    </Badge>
-                  )}
-                </Button>
+                <NotificationsDropdown />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center space-x-3 px-4 py-2">
+                    <Button
+                      variant="ghost"
+                      className="flex items-center space-x-3 px-4 py-2"
+                    >
                       <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-gray-100 text-gray-900">{currentUser?.name?.[0] || "U"}</AvatarFallback>
+                        <AvatarFallback className="bg-gray-100 text-gray-900">
+                          {currentUser?.name?.[0] || "U"}
+                        </AvatarFallback>
                       </Avatar>
                       <span className="text-sm font-medium text-gray-900">
                         {currentUser?.name}
                       </span>
                       {currentUser?.isAdmin && (
-                        <Badge variant="secondary" className="bg-gray-200 text-gray-900">Admin</Badge>
+                        <Badge
+                          variant="secondary"
+                          className="bg-gray-200 text-gray-900"
+                        >
+                          Admin
+                        </Badge>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout}>
+                      Logout
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
 
               {/* Mobile Menu Button and Sheet */}
               <div className="lg:hidden flex items-center space-x-2">
-                <Button variant="ghost" className="relative p-2">
-                  <Bell size={20} />
-                  {notifications > 0 && (
-                    <Badge className="absolute -top-1 -right-1 px-1 py-0.5 text-xs bg-red-500">
-                      {notifications > 9 ? '9+' : notifications}
-                    </Badge>
-                  )}
-                </Button>
+                <NotificationsDropdown />
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
@@ -131,12 +157,21 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) =>
                     <div className="flex flex-col h-full">
                       <div className="flex items-center space-x-3 px-4 py-6 border-b border-gray-200">
                         <Avatar className="w-10 h-10">
-                          <AvatarFallback className="bg-gray-100 text-gray-900">{currentUser?.name?.[0] || "U"}</AvatarFallback>
+                          <AvatarFallback className="bg-gray-100 text-gray-900">
+                            {currentUser?.name?.[0] || "U"}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-gray-900">{currentUser?.name}</div>
+                          <div className="font-medium text-gray-900">
+                            {currentUser?.name}
+                          </div>
                           {currentUser?.isAdmin && (
-                            <Badge variant="secondary" className="bg-gray-200 text-gray-900">Administrator</Badge>
+                            <Badge
+                              variant="secondary"
+                              className="bg-gray-200 text-gray-900"
+                            >
+                              Administrator
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -156,7 +191,10 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) =>
                               }
                               onClick={() => {
                                 // Close sheet after navigation
-                                document.activeElement && (document.activeElement as HTMLElement).blur();
+                                document.activeElement &&
+                                  (
+                                    document.activeElement as HTMLElement
+                                  ).blur();
                               }}
                             >
                               <Icon size={20} />
@@ -164,7 +202,11 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, notifications }) =>
                             </NavLink>
                           );
                         })}
-                        <Button variant="outline" className="w-full mt-4" onClick={handleLogout}>
+                        <Button
+                          variant="outline"
+                          className="w-full mt-4"
+                          onClick={handleLogout}
+                        >
                           Logout
                         </Button>
                       </nav>

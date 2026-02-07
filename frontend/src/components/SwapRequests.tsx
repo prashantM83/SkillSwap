@@ -9,6 +9,7 @@ import {
 } from "../features/swaps/swapsSlice";
 import { User } from "../types";
 import { getAllUsers } from "../services/userService";
+import { submitFeedback } from "../services/feedbackService";
 import {
   MessageSquare,
   Plus,
@@ -20,14 +21,27 @@ import {
   Calendar,
   Award,
   AlertCircle,
+  Star,
 } from "lucide-react";
 // shadcn/ui imports
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,9 +53,7 @@ interface SwapRequestsProps {
 
 export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { swaps } = useSelector(
-    (state: RootState) => state.swaps,
-  );
+  const { swaps } = useSelector((state: RootState) => state.swaps);
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
@@ -52,6 +64,16 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
     skillWanted: "",
     message: "",
   });
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedSwapForFeedback, setSelectedSwapForFeedback] =
+    useState<any>(null);
+  const [feedbackForm, setFeedbackForm] = useState({
+    rating: 5,
+    comment: "",
+  });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     dispatch(fetchSwaps());
@@ -77,13 +99,15 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(createSwap({
-      fromUserId: currentUser._id,
-      toUserId: form.toUserId,
-      skillOffered: form.skillOffered,
-      skillWanted: form.skillWanted,
-      message: form.message,
-    }));
+    dispatch(
+      createSwap({
+        fromUserId: currentUser._id,
+        toUserId: form.toUserId,
+        skillOffered: form.skillOffered,
+        skillWanted: form.skillWanted,
+        message: form.message,
+      }),
+    );
     setShowForm(false);
     setForm({ toUserId: "", skillOffered: "", skillWanted: "", message: "" });
   };
@@ -93,7 +117,59 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
   };
 
   const handleDelete = (id: string) => {
-    dispatch(deleteSwap(id));
+    if (window.confirm("Are you sure you want to delete this swap request?")) {
+      dispatch(deleteSwap(id));
+    }
+  };
+
+  const openFeedbackModal = (swap: any) => {
+    setSelectedSwapForFeedback(swap);
+    setFeedbackForm({ rating: 5, comment: "" });
+    setShowFeedbackModal(true);
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSwapForFeedback) return;
+
+    try {
+      // Determine the OTHER user in the swap (the one to receive feedback)
+      const swapFromUserId =
+        typeof selectedSwapForFeedback.fromUserId === "string"
+          ? selectedSwapForFeedback.fromUserId
+          : selectedSwapForFeedback.fromUserId._id;
+
+      const swapToUserId =
+        typeof selectedSwapForFeedback.toUserId === "string"
+          ? selectedSwapForFeedback.toUserId
+          : selectedSwapForFeedback.toUserId._id;
+
+      // If current user is the swap initiator, give feedback to the recipient
+      // If current user is the swap recipient, give feedback to the initiator
+      const feedbackRecipientId =
+        currentUser._id === swapFromUserId ? swapToUserId : swapFromUserId;
+
+      await submitFeedback({
+        swapId: selectedSwapForFeedback._id,
+        toUserId: feedbackRecipientId,
+        rating: feedbackForm.rating,
+        comment: feedbackForm.comment,
+      });
+
+      setShowFeedbackModal(false);
+      setSelectedSwapForFeedback(null);
+      setShowSuccessModal(true);
+
+      // Refetch swaps to ensure all data is updated including user ratings
+      dispatch(fetchSwaps());
+    } catch (error: any) {
+      console.error("Failed to submit feedback:", error);
+      const message =
+        error.response?.data?.message ||
+        "Feedback can only be given once for a swap request.";
+      setErrorMessage(message);
+      setShowErrorModal(true);
+    }
   };
 
   const getStatusVariant = (status: string) => {
@@ -126,37 +202,60 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
     }
   };
 
-  const filteredSwaps = swaps.filter((swap) => {
-    if (!swap) return false;
-    
-    const fromUserId = typeof swap.fromUserId === 'string' ? swap.fromUserId : swap.fromUserId?._id;
-    const toUserId = typeof swap.toUserId === 'string' ? swap.toUserId : swap.toUserId?._id;
-    
-    const matchesTab = 
-      activeTab === "all" ||
-      (activeTab === "sent" && fromUserId === currentUser._id) ||
-      (activeTab === "received" && toUserId === currentUser._id) ||
-      (activeTab === "pending" && swap.status === "pending");
+  const filteredSwaps = swaps
+    .filter((swap) => {
+      if (!swap) return false;
 
-    const matchesSearch = 
-      searchTerm === "" ||
-      swap.skillOffered.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      swap.skillWanted.toLowerCase().includes(searchTerm.toLowerCase());
+      const fromUserId =
+        typeof swap.fromUserId === "string"
+          ? swap.fromUserId
+          : swap.fromUserId?._id;
+      const toUserId =
+        typeof swap.toUserId === "string" ? swap.toUserId : swap.toUserId?._id;
 
-    return matchesTab && matchesSearch;
-  });
+      const matchesTab =
+        activeTab === "all" ||
+        (activeTab === "sent" && fromUserId === currentUser._id) ||
+        (activeTab === "received" && toUserId === currentUser._id) ||
+        (activeTab === "pending" && swap.status === "pending");
+
+      const matchesSearch =
+        searchTerm === "" ||
+        swap.skillOffered.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        swap.skillWanted.toLowerCase().includes(searchTerm.toLowerCase());
+
+      return matchesTab && matchesSearch;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
   const tabs = [
     { id: "all", label: "All Swaps", count: swaps.length },
-    { id: "sent", label: "Sent", count: swaps.filter(s => {
-      const fromUserId = typeof s?.fromUserId === 'string' ? s.fromUserId : s?.fromUserId?._id;
-      return fromUserId === currentUser._id;
-    }).length },
-    { id: "received", label: "Received", count: swaps.filter(s => {
-      const toUserId = typeof s?.toUserId === 'string' ? s.toUserId : s?.toUserId?._id;
-      return toUserId === currentUser._id;
-    }).length },
-    { id: "pending", label: "Pending", count: swaps.filter(s => s?.status === "pending").length },
+    {
+      id: "sent",
+      label: "Sent",
+      count: swaps.filter((s) => {
+        const fromUserId =
+          typeof s?.fromUserId === "string" ? s.fromUserId : s?.fromUserId?._id;
+        return fromUserId === currentUser._id;
+      }).length,
+    },
+    {
+      id: "received",
+      label: "Received",
+      count: swaps.filter((s) => {
+        const toUserId =
+          typeof s?.toUserId === "string" ? s.toUserId : s?.toUserId?._id;
+        return toUserId === currentUser._id;
+      }).length,
+    },
+    {
+      id: "pending",
+      label: "Pending",
+      count: swaps.filter((s) => s?.status === "pending").length,
+    },
   ];
 
   return (
@@ -183,7 +282,10 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
               {/* Search */}
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  size={20}
+                />
                 <Input
                   type="text"
                   placeholder="Search skills..."
@@ -193,7 +295,7 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
                 />
               </div>
             </div>
-            
+
             <Dialog open={showForm} onOpenChange={setShowForm}>
               <DialogTrigger asChild>
                 <Button className="flex items-center space-x-2">
@@ -208,14 +310,24 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
                 <form onSubmit={handleCreate} className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="toUserId">Select User</Label>
-                    <Select value={form.toUserId} onValueChange={(value) => setForm({...form, toUserId: value})}>
+                    <Select
+                      value={form.toUserId}
+                      onValueChange={(value) =>
+                        setForm({ ...form, toUserId: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choose a user" />
                       </SelectTrigger>
                       <SelectContent>
                         {users
-                          .filter(user => user._id !== currentUser._id && user.isPublic && !user.isBanned)
-                          .map(user => (
+                          .filter(
+                            (user) =>
+                              user._id !== currentUser._id &&
+                              user.isPublic &&
+                              !user.isBanned,
+                          )
+                          .map((user) => (
                             <SelectItem key={user._id} value={user._id}>
                               {user.name}
                             </SelectItem>
@@ -255,10 +367,21 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
                     />
                   </div>
                   <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowForm(false)}
+                    >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={!form.toUserId || !form.skillOffered || !form.skillWanted}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        !form.toUserId ||
+                        !form.skillOffered ||
+                        !form.skillWanted
+                      }
+                    >
                       Send Request
                     </Button>
                   </div>
@@ -271,7 +394,11 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
             <TabsList className="grid w-full grid-cols-4">
               {tabs.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-2">
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="flex items-center space-x-2"
+                >
                   <span>{tab.label}</span>
                   <Badge variant="secondary" className="ml-1">
                     {tab.count}
@@ -287,12 +414,18 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
       <div className="space-y-4">
         {filteredSwaps.map((swap) => {
           if (!swap) return null;
-          
-          const fromUserId = typeof swap.fromUserId === 'string' ? swap.fromUserId : swap.fromUserId?._id;
+
+          const fromUserId =
+            typeof swap.fromUserId === "string"
+              ? swap.fromUserId
+              : swap.fromUserId?._id;
           const isSentByMe = fromUserId === currentUser._id;
           const otherUser = isSentByMe ? swap.toUserId : swap.fromUserId;
-          const otherUserName = typeof otherUser === 'string' ? 'Unknown User' : otherUser?.name || 'Unknown User';
-          
+          const otherUserName =
+            typeof otherUser === "string"
+              ? "Unknown User"
+              : otherUser?.name || "Unknown User";
+
           return (
             <Card key={swap._id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
@@ -305,21 +438,30 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <h3 className="font-semibold text-gray-900">{otherUserName}</h3>
-                        <Badge variant={getStatusVariant(swap.status)} className="flex items-center space-x-1">
+                        <h3 className="font-semibold text-gray-900">
+                          {otherUserName}
+                        </h3>
+                        <Badge
+                          variant={getStatusVariant(swap.status)}
+                          className="flex items-center space-x-1"
+                        >
                           {getStatusIcon(swap.status)}
                           <span className="capitalize">{swap.status}</span>
                         </Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">You want to learn:</p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            You want to learn:
+                          </p>
                           <Badge variant="outline" className="bg-gray-100">
                             {swap.skillWanted}
                           </Badge>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">You're offering:</p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            You're offering:
+                          </p>
                           <Badge variant="outline" className="bg-gray-100">
                             {swap.skillOffered}
                           </Badge>
@@ -327,16 +469,20 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
                       </div>
                       {swap.message && (
                         <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                          <p className="text-sm text-gray-700">{swap.message}</p>
+                          <p className="text-sm text-gray-700">
+                            {swap.message}
+                          </p>
                         </div>
                       )}
                       <div className="flex items-center space-x-2 text-xs text-gray-500">
                         <Calendar size={14} />
-                        <span>{new Date(swap.createdAt).toLocaleDateString()}</span>
+                        <span>
+                          {new Date(swap.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Actions */}
                   <div className="flex flex-col space-y-2 ml-4">
                     {swap.status === "pending" && !isSentByMe && (
@@ -370,6 +516,17 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
                         <span>Mark Complete</span>
                       </Button>
                     )}
+                    {swap.status === "completed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openFeedbackModal(swap)}
+                        className="flex items-center space-x-1"
+                      >
+                        <Star size={16} />
+                        <span>Leave Feedback</span>
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -397,6 +554,108 @@ export const SwapRequests: React.FC<SwapRequestsProps> = ({ currentUser }) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Feedback Modal */}
+      <Dialog open={showFeedbackModal} onOpenChange={setShowFeedbackModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Leave Feedback</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmitFeedback} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Rating</Label>
+              <div className="flex items-center space-x-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() =>
+                      setFeedbackForm({ ...feedbackForm, rating: star })
+                    }
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      size={32}
+                      className={
+                        star <= feedbackForm.rating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      }
+                    />
+                  </button>
+                ))}
+                <span className="ml-2 text-lg font-semibold">
+                  {feedbackForm.rating}/5
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="feedback-comment">Comment</Label>
+              <Textarea
+                id="feedback-comment"
+                value={feedbackForm.comment}
+                onChange={(e) =>
+                  setFeedbackForm({ ...feedbackForm, comment: e.target.value })
+                }
+                placeholder="Share your experience with this swap..."
+                rows={4}
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowFeedbackModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Submit Feedback</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Check size={24} className="text-green-600" />
+              <span>Success!</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-700">Feedback submitted successfully!</p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSuccessModal(false)}>OK</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Modal */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertCircle size={24} className="text-red-600" />
+              <span>Error</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-700">{errorMessage}</p>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="destructive"
+              onClick={() => setShowErrorModal(false)}
+            >
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

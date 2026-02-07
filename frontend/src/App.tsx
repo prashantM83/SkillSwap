@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { Header } from "./components/Header";
+import { Home } from "./components/Home";
 import { UserProfile } from "./components/UserProfile";
 import { SkillBrowser } from "./components/SkillBrowser";
 import { SwapRequests } from "./components/SwapRequests";
 import { AdminDashboard } from "./components/AdminDashboard";
-import { Login, Register } from "./components/Auth/index.ts";
+import { Login, Register, ForgotPassword } from "./components/Auth/index.ts";
 import { NotFound } from "./components/NotFound";
+import { SocketProvider } from "./context/SocketContext";
+import { MessagesPage } from "./components/MessagesPage";
+import { SessionsCalendar } from "./components/SessionsCalendar";
 import type { User } from "./types";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "./store";
@@ -105,8 +109,8 @@ function App() {
   useEffect(() => {
     if (!currentUser) {
       // Clear all admin redirect flags when no user is logged in
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('adminRedirected_')) {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("adminRedirected_")) {
           localStorage.removeItem(key);
         }
       });
@@ -125,96 +129,128 @@ function App() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header currentUser={currentUser} notifications={notifications} />
+    <SocketProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Header currentUser={currentUser} notifications={notifications} />
 
-      <main className="py-4 sm:py-8">
-        <Routes>
-          <Route path="/auth/register" element={<Register />} />
-          <Route path="/auth/login" element={<Login />} />
+        <main className="py-4 sm:py-8">
+          <Routes>
+            <Route path="/auth/register" element={<Register />} />
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
 
-          <Route
-            path="/"
-            element={
-              authLoading ? (
-                <div className="flex justify-center items-center h-40 text-lg text-gray-600">
-                  Loading...
-                </div>
-              ) : currentUser ? (
-                (() => {
-                  // Check if admin has been redirected to dashboard for this session
-                  const adminRedirected = localStorage.getItem(`adminRedirected_${currentUser._id}`);
-                  
-                  if (currentUser.isAdmin && !adminRedirected) {
-                    // Mark admin as redirected and redirect to admin dashboard
-                    localStorage.setItem(`adminRedirected_${currentUser._id}`, 'true');
-                    return <Navigate to="/admin" replace />;
-                  }
-                  
-                  return <SkillBrowser currentUser={currentUser} />;
-                })()
-              ) : (
-                <Navigate to="/auth/login" replace />
-              )
-            }
-          />
+            <Route path="/" element={<Home isLoggedIn={!!currentUser} />} />
 
-          <Route
-            path="/profile"
-            element={
-              authLoading ? (
-                <div className="flex justify-center items-center h-40 text-lg text-gray-600">
-                  Loading...
-                </div>
-              ) : currentUser ? (
-                <UserProfile user={currentUser} isOwnProfile={true} />
-              ) : (
-                <Navigate to="/auth/login" replace />
-              )
-            }
-          />
+            <Route
+              path="/browse"
+              element={
+                authLoading ? (
+                  <div className="flex justify-center items-center h-40 text-lg text-gray-600">
+                    Loading...
+                  </div>
+                ) : currentUser ? (
+                  (() => {
+                    // Check if admin has been redirected to dashboard for this session
+                    const adminRedirected = localStorage.getItem(
+                      `adminRedirected_${currentUser._id}`,
+                    );
 
-          <Route
-            path="/profile/:userId"
-            element={
-              authLoading ? (
-                <div className="flex justify-center items-center h-40 text-lg text-gray-600">
-                  Loading...
-                </div>
-              ) : currentUser ? (
-                <UserProfileWrapper currentUser={currentUser} />
-              ) : (
-                <Navigate to="/auth/login" replace />
-              )
-            }
-          />
+                    if (currentUser.isAdmin && !adminRedirected) {
+                      // Mark admin as redirected and redirect to admin dashboard
+                      localStorage.setItem(
+                        `adminRedirected_${currentUser._id}`,
+                        "true",
+                      );
+                      return <Navigate to="/admin" replace />;
+                    }
 
-          <Route
-            path="/swaps"
-            element={
-              currentUser ? (
-                <SwapRequests currentUser={currentUser} />
-              ) : (
-                <Navigate to="/auth/login" replace />
-              )
-            }
-          />
+                    return <SkillBrowser currentUser={currentUser} />;
+                  })()
+                ) : (
+                  <Navigate to="/auth/login" replace />
+                )
+              }
+            />
 
-          <Route
-            path="/admin"
-            element={
-              currentUser?.isAdmin ? (
-                <AdminDashboard />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
+            <Route
+              path="/profile"
+              element={
+                authLoading ? (
+                  <div className="flex justify-center items-center h-40 text-lg text-gray-600">
+                    Loading...
+                  </div>
+                ) : currentUser ? (
+                  <UserProfile user={currentUser} isOwnProfile={true} />
+                ) : (
+                  <Navigate to="/auth/login" replace />
+                )
+              }
+            />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-    </div>
+            <Route
+              path="/profile/:userId"
+              element={
+                authLoading ? (
+                  <div className="flex justify-center items-center h-40 text-lg text-gray-600">
+                    Loading...
+                  </div>
+                ) : currentUser ? (
+                  <UserProfileWrapper currentUser={currentUser} />
+                ) : (
+                  <Navigate to="/auth/login" replace />
+                )
+              }
+            />
+
+            <Route
+              path="/swaps"
+              element={
+                currentUser ? (
+                  <SwapRequests currentUser={currentUser} />
+                ) : (
+                  <Navigate to="/auth/login" replace />
+                )
+              }
+            />
+
+            <Route
+              path="/messages"
+              element={
+                currentUser ? (
+                  <MessagesPage />
+                ) : (
+                  <Navigate to="/auth/login" replace />
+                )
+              }
+            />
+
+            <Route
+              path="/sessions"
+              element={
+                currentUser ? (
+                  <SessionsCalendar currentUser={currentUser} />
+                ) : (
+                  <Navigate to="/auth/login" replace />
+                )
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                currentUser?.isAdmin ? (
+                  <AdminDashboard />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
+    </SocketProvider>
   );
 }
 

@@ -25,6 +25,7 @@ export interface CreateMessageData {
   title: string;
   content: string;
   type: "info" | "warning" | "update" | "maintenance";
+  sendEmail?: boolean;
 }
 
 // Get admin statistics

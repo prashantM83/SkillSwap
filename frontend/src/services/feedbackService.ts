@@ -25,9 +25,15 @@ export const getAllFeedback = async (): Promise<Feedback[]> => {
   return response.data;
 };
 
-// Get feedback for a specific user
+// Get feedback RECEIVED by a specific user
 export const getUserFeedback = async (userId: string): Promise<Feedback[]> => {
   const response = await api.get(`/feedback/user/${userId}`);
+  return response.data;
+};
+
+// Get feedback GIVEN by a specific user
+export const getFeedbackByUser = async (userId: string): Promise<Feedback[]> => {
+  const response = await api.get(`/feedback/by/${userId}`);
   return response.data;
 };
 

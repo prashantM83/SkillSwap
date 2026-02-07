@@ -25,10 +25,12 @@ import {
   createAdminMessage,
   getAdminMessages,
   type AdminMessage,
+  getAllFeedbackAdmin,
 } from "../services/adminService";
 import { banUser, unbanUser } from "../services/userService";
+import { deleteFeedback } from "../services/feedbackService";
 import api from "../features/auth/axiosConfig";
-import type { User } from "../types";
+import type { User, Feedback } from "../types";
 // shadcn/ui imports
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,19 +38,37 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 
 export const AdminDashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { swaps } = useSelector((state: RootState) => state.swaps);
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<AdminMessage[]>([]);
+  const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -59,7 +79,10 @@ export const AdminDashboard: React.FC = () => {
   >("info");
   const [banLoading, setBanLoading] = useState<string | null>(null);
   const [messageLoading, setMessageLoading] = useState(false);
+  const [sendEmailWithMessage, setSendEmailWithMessage] = useState(false);
   const [recalculateLoading, setRecalculateLoading] = useState(false);
+  const [showDeleteFeedbackModal, setShowDeleteFeedbackModal] = useState(false);
+  const [feedbackToDelete, setFeedbackToDelete] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -79,12 +102,22 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchFeedback = async () => {
+    try {
+      const fetchedFeedback = await getAllFeedbackAdmin();
+      setFeedback(fetchedFeedback);
+    } catch (error) {
+      console.error("Failed to fetch feedback:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         dispatch(fetchSwaps());
         await fetchUsers();
         await fetchMessages();
+        await fetchFeedback();
       } catch (error) {
         console.error("Failed to fetch admin data:", error);
       } finally {
@@ -149,11 +182,13 @@ export const AdminDashboard: React.FC = () => {
           title: messageTitle,
           content: messageContent,
           type: messageType,
+          sendEmail: sendEmailWithMessage,
         });
         setShowMessageModal(false);
         setMessageTitle("");
         setMessageContent("");
         setMessageType("info");
+        setSendEmailWithMessage(false);
         // Refresh messages list
         await fetchMessages();
         // You could add a success notification here
@@ -163,6 +198,25 @@ export const AdminDashboard: React.FC = () => {
       } finally {
         setMessageLoading(false);
       }
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    setFeedbackToDelete(feedbackId);
+    setShowDeleteFeedbackModal(true);
+  };
+
+  const confirmDeleteFeedback = async () => {
+    if (!feedbackToDelete) return;
+
+    try {
+      await deleteFeedback(feedbackToDelete);
+      await fetchFeedback();
+      setShowDeleteFeedbackModal(false);
+      setFeedbackToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete feedback:", error);
+      alert("Failed to delete feedback");
     }
   };
 
@@ -208,7 +262,9 @@ export const AdminDashboard: React.FC = () => {
         <Card>
           <CardContent className="p-12">
             <div className="text-center">
-              <div className="text-gray-500 mb-4">Loading admin dashboard...</div>
+              <div className="text-gray-500 mb-4">
+                Loading admin dashboard...
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -224,17 +280,19 @@ export const AdminDashboard: React.FC = () => {
           <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
             <Shield size={24} className="text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-black">
-            Admin Dashboard
-          </h1>
+          <h1 className="text-3xl font-bold text-black">Admin Dashboard</h1>
         </div>
         <p className="text-gray-600">
           Manage users, monitor activity, and oversee platform operations
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <BarChart3 size={16} />
             <span>Overview</span>
@@ -246,6 +304,10 @@ export const AdminDashboard: React.FC = () => {
           <TabsTrigger value="messages" className="flex items-center space-x-2">
             <MessageSquare size={16} />
             <span>Messages</span>
+          </TabsTrigger>
+          <TabsTrigger value="feedback" className="flex items-center space-x-2">
+            <Star size={16} />
+            <span>Feedback</span>
           </TabsTrigger>
           <TabsTrigger value="tools" className="flex items-center space-x-2">
             <Settings size={16} />
@@ -259,11 +321,15 @@ export const AdminDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Total Users
+                </CardTitle>
                 <Users className="h-4 w-4 text-gray-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-black">{stats.totalUsers}</div>
+                <div className="text-2xl font-bold text-black">
+                  {stats.totalUsers}
+                </div>
                 <p className="text-xs text-gray-600">
                   {stats.activeUsers} active, {stats.bannedUsers} banned
                 </p>
@@ -272,11 +338,15 @@ export const AdminDashboard: React.FC = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Total Swaps</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Total Swaps
+                </CardTitle>
                 <Activity className="h-4 w-4 text-gray-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-black">{stats.totalSwaps}</div>
+                <div className="text-2xl font-bold text-black">
+                  {stats.totalSwaps}
+                </div>
                 <p className="text-xs text-gray-600">
                   {stats.pendingSwaps} pending, {stats.completedSwaps} completed
                 </p>
@@ -285,27 +355,29 @@ export const AdminDashboard: React.FC = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Average Rating</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Average Rating
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-gray-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-black">{stats.averageRating.toFixed(1)}</div>
-                <p className="text-xs text-gray-600">
-                  Across all users
-                </p>
+                <div className="text-2xl font-bold text-black">
+                  {stats.averageRating.toFixed(1)}
+                </div>
+                <p className="text-xs text-gray-600">Across all users</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Platform Health</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Platform Health
+                </CardTitle>
                 <CheckCircle className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-black">Good</div>
-                <p className="text-xs text-gray-600">
-                  All systems operational
-                </p>
+                <p className="text-xs text-gray-600">All systems operational</p>
               </CardContent>
             </Card>
           </div>
@@ -318,21 +390,31 @@ export const AdminDashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 {swaps.slice(0, 5).map((swap) => (
-                  <div key={swap._id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                  <div
+                    key={swap._id}
+                    className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg"
+                  >
                     <Avatar className="w-8 h-8">
                       <AvatarFallback className="bg-gray-200 text-gray-900 text-xs">
-                        {typeof swap.fromUserId === 'string' ? 'U' : swap.fromUserId?.name?.[0] || 'U'}
+                        {typeof swap.fromUserId === "string"
+                          ? "U"
+                          : swap.fromUserId?.name?.[0] || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
-                        New swap request: {swap.skillOffered} ↔ {swap.skillWanted}
+                        New swap request: {swap.skillOffered} ↔{" "}
+                        {swap.skillWanted}
                       </p>
                       <p className="text-xs text-gray-600">
                         {new Date(swap.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge variant={swap.status === 'pending' ? 'secondary' : 'default'}>
+                    <Badge
+                      variant={
+                        swap.status === "pending" ? "secondary" : "default"
+                      }
+                    >
                       {swap.status}
                     </Badge>
                   </div>
@@ -367,33 +449,47 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex items-center space-x-3">
                           <Avatar className="w-8 h-8">
                             <AvatarFallback className="bg-gray-200 text-gray-900 text-xs">
-                              {user.name?.[0] || 'U'}
+                              {user.name?.[0] || "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium text-gray-900">{user.name}</div>
+                            <div className="font-medium text-gray-900">
+                              {user.name}
+                            </div>
                             <div className="text-xs text-gray-600">
-                              Joined {new Date(user.joinDate).toLocaleDateString()}
+                              Joined{" "}
+                              {new Date(user.joinDate).toLocaleDateString()}
                             </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-gray-600">{user.email}</TableCell>
+                      <TableCell className="text-gray-600">
+                        {user.email}
+                      </TableCell>
                       <TableCell>{user.totalSwaps}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-1">
-                          <Star size={14} className="text-yellow-500 fill-current" />
+                          <Star
+                            size={14}
+                            className="text-yellow-500 fill-current"
+                          />
                           <span>{user.rating.toFixed(1)}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         {user.isBanned ? (
-                          <Badge variant="destructive" className="flex items-center space-x-1">
+                          <Badge
+                            variant="destructive"
+                            className="flex items-center space-x-1"
+                          >
                             <UserX size={12} />
                             <span>Banned</span>
                           </Badge>
                         ) : (
-                          <Badge variant="default" className="flex items-center space-x-1">
+                          <Badge
+                            variant="default"
+                            className="flex items-center space-x-1"
+                          >
                             <UserCheck size={12} />
                             <span>Active</span>
                           </Badge>
@@ -424,7 +520,9 @@ export const AdminDashboard: React.FC = () => {
         {/* Messages Tab */}
         <TabsContent value="messages" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-gray-900">Admin Messages</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Admin Messages
+            </h3>
             <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
               <DialogTrigger asChild>
                 <Button className="flex items-center space-x-2">
@@ -448,7 +546,10 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="message-type">Type</Label>
-                    <Select value={messageType} onValueChange={(value: any) => setMessageType(value)}>
+                    <Select
+                      value={messageType}
+                      onValueChange={(value: any) => setMessageType(value)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -470,12 +571,37 @@ export const AdminDashboard: React.FC = () => {
                       rows={4}
                     />
                   </div>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="send-email"
+                      checked={sendEmailWithMessage}
+                      onChange={(e) =>
+                        setSendEmailWithMessage(e.target.checked)
+                      }
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <Label
+                      htmlFor="send-email"
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      Also send this message via email to all users
+                    </Label>
+                  </div>
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowMessageModal(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowMessageModal(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleSendMessage} disabled={messageLoading || !messageTitle || !messageContent}>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={
+                      messageLoading || !messageTitle || !messageContent
+                    }
+                  >
                     {messageLoading ? (
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
                     ) : (
@@ -492,15 +618,22 @@ export const AdminDashboard: React.FC = () => {
             <CardContent className="p-6">
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <div key={message._id} className="border border-gray-200 rounded-lg p-4">
+                  <div
+                    key={message._id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900">{message.title}</h4>
+                      <h4 className="font-semibold text-gray-900">
+                        {message.title}
+                      </h4>
                       <Badge variant="secondary">{message.type}</Badge>
                     </div>
                     <p className="text-gray-600 mb-2">{message.content}</p>
                     <div className="flex items-center space-x-2 text-xs text-gray-500">
                       <Clock size={12} />
-                      <span>{new Date(message.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(message.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -508,7 +641,117 @@ export const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
+        {/* Feedback Tab */}
+        <TabsContent value="feedback" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Star size={20} />
+                  <span>All Feedback</span>
+                </div>
+                <Badge variant="secondary">{feedback.length} total</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Comment</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {feedback.map((item) => {
+                    const fromUser =
+                      typeof item.fromUserId === "string"
+                        ? null
+                        : item.fromUserId;
+                    const toUser =
+                      typeof item.toUserId === "string" ? null : item.toUserId;
+                    return (
+                      <TableRow key={item._id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="w-6 h-6">
+                              <AvatarFallback className="bg-gray-200 text-gray-700 text-xs">
+                                {fromUser?.name?.[0] || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
+                              {fromUser?.name || "Unknown"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="w-6 h-6">
+                              <AvatarFallback className="bg-gray-200 text-gray-700 text-xs">
+                                {toUser?.name?.[0] || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
+                              {toUser?.name || "Unknown"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                size={12}
+                                className={
+                                  i < item.rating
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }
+                              />
+                            ))}
+                            <span className="ml-1 text-sm font-semibold">
+                              {item.rating}/5
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-gray-700 max-w-xs truncate">
+                            {item.comment}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-gray-500">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteFeedback(item._id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <AlertTriangle size={14} className="mr-1" />
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {feedback.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Star size={48} className="mx-auto mb-4 text-gray-300" />
+                  <p>No feedback submitted yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         {/* Tools Tab */}
         <TabsContent value="tools" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -565,6 +808,42 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Feedback Confirmation Dialog */}
+      <Dialog
+        open={showDeleteFeedbackModal}
+        onOpenChange={setShowDeleteFeedbackModal}
+      >
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertTriangle size={20} className="text-red-600" />
+              <span>Delete Feedback</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-700">
+              Are you sure you want to delete this feedback? This action cannot
+              be undone.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteFeedbackModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteFeedback}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
