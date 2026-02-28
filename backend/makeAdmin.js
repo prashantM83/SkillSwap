@@ -1,9 +1,14 @@
 const mongoose = require("mongoose");
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const User = require("./models/User");
 
-// MongoDB connection string - update this with your actual connection string
-const MONGODB_URI =
-  "mongodb+srv://shreyanshranpariya:eEboWEKfc5dFJAqS@cluster0.n3zvoq3.mongodb.net/skillswap";
+const MONGODB_URI = process.env.MONGO_URI;
+
+if (!MONGODB_URI) {
+  console.error("❌ MONGO_URI not found in .env file");
+  process.exit(1);
+}
 
 async function makeAdmin(email) {
   try {
