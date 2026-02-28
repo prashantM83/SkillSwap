@@ -123,46 +123,7 @@ JWT_REFRESH_EXPIRES_IN=7d
 2. Create a new database cluster
 3. Get your connection string
 4. Update the `MONGODB_URI` in your `.env` file
-
-## 📁 Project Structure
-
-```
-SkillSwap/
-├── backend/
-│   ├── config/
-│   │   └── database.js
-│   ├── controllers/
-│   │   ├── adminController.js
-│   │   ├── authController.js
-│   │   ├── feedbackController.js
-│   │   ├── swapController.js
-│   │   └── userController.js
-│   ├── middleware/
-│   │   └── authMiddleware.js
-│   ├── models/
-│   │   ├── AdminMessage.js
-│   │   ├── Feedback.js
-│   │   ├── SwapRequest.js
-│   │   └── User.js
-│   ├── routes/
-│   │   ├── admin.js
-│   │   ├── auth.js
-│   │   ├── feedback.js
-│   │   ├── swaps.js
-│   │   └── users.js
-│   ├── server.js
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── features/
-│   │   ├── services/
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   └── package.json
-└── README.md
-```
-
+   
 ## 🔧 Available Scripts
 
 ### Backend
@@ -176,37 +137,6 @@ SkillSwap/
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
-
-## 🌐 API Endpoints
-
-### Authentication
-
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Refresh JWT token
-
-### Users
-
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update user profile
-- `GET /api/users/skills` - Get available skills
-
-### Swaps
-
-- `GET /api/swaps` - Get all swap requests
-- `POST /api/swaps` - Create new swap request
-- `PUT /api/swaps/:id` - Update swap request
-- `DELETE /api/swaps/:id` - Delete swap request
-
-### Feedback
-
-- `GET /api/feedback` - Get feedback
-- `POST /api/feedback` - Submit feedback
-
-### Admin
-
-- `GET /api/admin/users` - Get all users (admin only)
-- `POST /api/admin/messages` - Send admin message
 
 ## 🤝 Contributing
 
