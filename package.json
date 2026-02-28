@@ -24,13 +24,5 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Dhairya3391/skillswap.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Dhairya3391/skillswap/issues"
-  },
-  "homepage": "https://github.com/Dhairya3391/skillswap#readme"
+  }
 }
