@@ -17,7 +17,9 @@ console.log("🔐 MONGO_URI from env =", process.env.MONGO_URI);
 
 const express = require("express");
 const cors = require("cors");
+const swaggerUi = require("swagger-ui-express");
 const connectDB = require("./config/database");
+const swaggerSpec = require("./swagger");
 
 // Routes
 const authRoutes = require("./routes/auth");
@@ -82,6 +84,13 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/sessions", sessionRoutes);
+
+// Swagger docs
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get("/api-docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
 
 // Health check route
 app.get("/", (req, res) => {
