@@ -20,8 +20,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -110,7 +122,9 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
         <div className="text-center py-12">
           <div className="inline-flex items-center space-x-2 text-gray-600">
             <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
-            <span className="text-lg font-medium">Loading amazing skills...</span>
+            <span className="text-lg font-medium">
+              Loading amazing skills...
+            </span>
           </div>
         </div>
       </div>
@@ -129,7 +143,8 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
           <Sparkles className="text-gray-600" size={32} />
         </div>
         <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-          Connect with talented individuals and exchange knowledge in a vibrant learning community
+          Connect with talented individuals and exchange knowledge in a vibrant
+          learning community
         </p>
       </div>
 
@@ -170,7 +185,10 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
       {/* Results Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
         {filteredUsers.map((user) => (
-          <Card key={user._id} className="group hover:shadow-lg transition-all duration-300">
+          <Card
+            key={user._id}
+            className="group hover:shadow-lg transition-all duration-300"
+          >
             <CardHeader>
               <div className="flex items-center space-x-4">
                 <Avatar className="w-14 h-14">
@@ -197,14 +215,18 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
                 <div className="bg-gray-100 rounded-lg p-3 text-center">
                   <div className="flex items-center justify-center space-x-1 mb-1">
                     <Star size={16} className="text-yellow-500 fill-current" />
-                    <span className="font-bold text-gray-900">{user.rating.toFixed(1)}</span>
+                    <span className="font-bold text-gray-900">
+                      {user.rating.toFixed(1)}
+                    </span>
                   </div>
                   <div className="text-xs text-gray-600">Rating</div>
                 </div>
                 <div className="bg-gray-100 rounded-lg p-3 text-center">
                   <div className="flex items-center justify-center space-x-1 mb-1">
                     <Award size={16} className="text-gray-600" />
-                    <span className="font-bold text-gray-900">{user.totalSwaps}</span>
+                    <span className="font-bold text-gray-900">
+                      {user.totalSwaps}
+                    </span>
                   </div>
                   <div className="text-xs text-gray-600">Swaps</div>
                 </div>
@@ -212,10 +234,16 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
 
               {/* Skills */}
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Skills Offered</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Skills Offered
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {user.skillsOffered.slice(0, 3).map((skill, index) => (
-                    <Badge key={index} variant="secondary" className="bg-gray-200 text-gray-900">
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="bg-gray-200 text-gray-900"
+                    >
                       {skill}
                     </Badge>
                   ))}
@@ -245,11 +273,20 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
                 >
                   View Profile
                 </Button>
-                <Dialog>
+                <Dialog
+                  open={selectedUser?._id === user._id}
+                  onOpenChange={(open) => {
+                    if (!open && selectedUser?._id === user._id) {
+                      setSelectedUser(null);
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
-                      onClick={() => openRequestModal(user, user.skillsOffered[0])}
+                      onClick={() =>
+                        openRequestModal(user, user.skillsOffered[0])
+                      }
                       className="flex-1"
                     >
                       <MessageCircle size={16} className="mr-2" />
@@ -262,8 +299,13 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="skill-wanted">Skill I want to learn</Label>
-                        <Select value={selectedSkill} onValueChange={setSelectedSkill}>
+                        <Label htmlFor="skill-wanted">
+                          Skill I want to learn
+                        </Label>
+                        <Select
+                          value={selectedSkill}
+                          onValueChange={setSelectedSkill}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select a skill" />
                           </SelectTrigger>
@@ -297,10 +339,16 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
                       </div>
                     </div>
                     <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setSelectedUser(null)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setSelectedUser(null)}
+                      >
                         Cancel
                       </Button>
-                      <Button onClick={handleRequestSwap} disabled={!selectedSkill || !mySkillToOffer}>
+                      <Button
+                        onClick={handleRequestSwap}
+                        disabled={!selectedSkill || !mySkillToOffer}
+                      >
                         Send Request
                       </Button>
                     </div>
@@ -314,11 +362,16 @@ export const SkillBrowser: React.FC<SkillBrowserProps> = ({ currentUser }) => {
 
       {filteredUsers.length === 0 && !loading && (
         <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">No users found matching your criteria</div>
-          <Button variant="outline" onClick={() => {
-            setSearchTerm("");
-            setSelectedFilter("all");
-          }}>
+          <div className="text-gray-500 mb-4">
+            No users found matching your criteria
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedFilter("all");
+            }}
+          >
             Clear Filters
           </Button>
         </div>
