@@ -43,10 +43,29 @@ const app = express();
 // Create HTTP server
 const server = http.createServer(app);
 
+// CORS allowlist from env (comma-separated)
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // allow non-browser tools (no Origin header) + allowed browser origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+};
+
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    // Previous single-origin setup:
+    // origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -68,10 +87,14 @@ connectDB();
 
 // Middleware
 app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-    credentials: true,
-  })
+  cors(
+    // Previous single-origin setup:
+    // {
+    //   origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    //   credentials: true,
+    // }
+    corsOptions,
+  )
 );
 app.use(express.json());
 
